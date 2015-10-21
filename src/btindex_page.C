@@ -45,11 +45,55 @@ Status BTIndexPage::deleteKey (const void *key, AttrType key_type, RID& curRid)
   return OK;
 }
 
+
 Status BTIndexPage::get_page_no(const void *key,
                                 AttrType key_type,
                                 PageId & pageNo)
 {
+
+  RID rid;
+  PageId firstPage;
+  Keytype firstKey;
+  Keytype targetKey;
+  PageId targetPage;
+  int numRec;
+  int i=0;
+
+  // Check if the key is NULL, if key is NULL, then provide current index page number.
+  if(key == NULL)
+  {
+    pageNo = page_no();
+    return OK;
+  }
+
+  // Get the first record in this index page.
+
+  if (OK != (stat = get_first(RID &rid, &firstKey, firstPage)))
+    return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_FIRST_FAILED);
+
+  if (keyCompare(key, firstKey, key_type) < 0)
+  {
+    // Given key is less than the first key stored in this page. Hence pageNo is nothing but the left pointer. 
+    pageNo = getLeftLink();
+    return OK;
+  }
+
+  // Well given key is greater than or equal to firstKey. So time to check where given key fits the bill. 
+  numRec = numberOfRecords();
+
+  while(i < numberOfRecords - 1)
+  {
+    if (OK != (stat = get_next(rid, &targetKey, targetPage)))
+      return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_NEXT_FAILED);
+
+    if (keyCompare(key, targetKey, key_type) )
+     
+  }
   
+
+
+
+
   return OK;
 }
 
@@ -58,12 +102,56 @@ Status BTIndexPage::get_first(RID& rid,
                               void *key,
                               PageId & pageNo)
 {
-  // put your code here
+  char *target;
+  int recLen;
+  Status stat;
+  KeyDataEntry *keyData = new KeyDataEntry;
+  DataType *dataType = new DataType;
+  
+  // Get the RID of the first record in the current page. 
+  if (OK != (stat = firstRecord(rid)))
+    return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_FIRST_FAILED);
+
+  // Collect the <key, pageNo> data stored in that RID to temporary data holder.
+
+  if(OK != (stat = returnRecord(rid, target, recLen)))
+    return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_FIRST_FAILED);
+
+  // Once the data is available, use get_key_data function defined in key.C to get 
+  // the pageNo attached to the key.
+
+  keyData = (KeyDataEntry *)target;
+  get_key_data(key, dataType, keyData, recLen, INDEX);
+  pageNo = dataType->pageNo;
   return OK;
 }
 
+
 Status BTIndexPage::get_next(RID& rid, void *key, PageId & pageNo)
 {
-  // put your code here
+
+  // Use nextRecord function to find the next page.
+
+  char *target;
+  RID curRid;
+  int recLen;
+  Status stat;
+  KeyDataEntry *keyData = new KeyDataEntry;
+  DataType *dataType = new DataType;
+
+  if (OK != (stat = nextRecord(rid, curRid)))
+  { 
+    pageNo = INVALID_PAGE;
+    return DONE;
+  }
+
+  if (OK != (stat = returnRecord(curRid, target, recLen)))
+    return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_NEXT_FAILED;
+
+  keyData = (KeyDataEntry *)target;
+  get_key_data(key, dataType, keyData, recLen, INDEX);
+  rid = curRid;
+  pageNo = dataType->pageNo;
+
   return OK;
 }
