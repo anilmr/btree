@@ -18,7 +18,7 @@ Status BTIndexPage::insertKey (const void *key,
 {
   // Create a new KeyDataEntry object to hold the key + pageNo 
   KeyDataEntry *target = new KeyDataEntry;
-  DataType *dataType = new DataType;
+  Datatype *dataType = new Datatype;
   int recLen;
 
   // As pageNo is the data payload in Index pages, add this to dataType union.
@@ -40,8 +40,7 @@ Status BTIndexPage::deleteKey (const void *key, AttrType key_type, RID& curRid)
 {
   
   if (OK != deleteRecord(curRid))
-        return MINIBASE_FIRST_ERROR(BTINDEXPAGE,DELETE_REC_FAILED);
-
+    return MINIBASE_FIRST_ERROR(BTINDEXPAGE,DELETE_REC_FAILED);
   return OK;
 }
 
@@ -54,8 +53,10 @@ Status BTIndexPage::get_page_no(const void *key,
   RID rid;
   PageId firstPage;
   Keytype firstKey;
+  Keytype curKey;
   Keytype targetKey;
   PageId targetPage;
+  PageId curPage;
   int numRec;
   int i=0;
 
@@ -77,24 +78,34 @@ Status BTIndexPage::get_page_no(const void *key,
     pageNo = getLeftLink();
     return OK;
   }
-
-  // Well given key is greater than or equal to firstKey. So time to check where given key fits the bill. 
-  numRec = numberOfRecords();
-
-  while(i < numberOfRecords - 1)
+  else 
   {
-    if (OK != (stat = get_next(rid, &targetKey, targetPage)))
-      return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_NEXT_FAILED);
+    curKey = firstKey;
+    curPage = firstPage;
+    // Well given key is greater than or equal to firstKey. So time to check where given key fits the bill. 
+    numRec = numberOfRecords();
 
-    if (keyCompare(key, targetKey, key_type) )
-     
-  }
+    while(i < numberOfRecords - 1)
+    {
+      if (OK != (stat = get_next(rid, &targetKey, targetPage)))
+        break;
+
+      if ((keyCompare(key, curKey, key_type) >= 0) && (keyCompare(key, targetKey, key_type) < 0)) 
+      {
+        pageNo = curPage;
+        return OK;
+      }
+    
+      curKey = targetKey;
+      curPage = targetPage;
+      ++i; 
+    }
   
+    pageNo = curPage;
+    return OK;
+  }
 
-
-
-
-  return OK;
+  return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_PAGE_NO_FAILED);
 }
 
     
@@ -106,7 +117,7 @@ Status BTIndexPage::get_first(RID& rid,
   int recLen;
   Status stat;
   KeyDataEntry *keyData = new KeyDataEntry;
-  DataType *dataType = new DataType;
+  Datatype *dataType = new Datatype;
   
   // Get the RID of the first record in the current page. 
   if (OK != (stat = firstRecord(rid)))
@@ -137,7 +148,7 @@ Status BTIndexPage::get_next(RID& rid, void *key, PageId & pageNo)
   int recLen;
   Status stat;
   KeyDataEntry *keyData = new KeyDataEntry;
-  DataType *dataType = new DataType;
+  Datatype *dataType = new Datatype;
 
   if (OK != (stat = nextRecord(rid, curRid)))
   { 
