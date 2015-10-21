@@ -14,7 +14,7 @@
 #include <string.h>
 
 // Define your error code for index page here
-// enum btIndexErrCodes  {...}
+enum btIndexErrCodes  {INSERT_REC_ERROR, GET_RECORD_FAILED, GET_FIRST_FAILED, GET_NEXT_FAILED, GET_PAGE_NO_FAILED};
 
 class BTIndexPage : public SortedPage {
  private:

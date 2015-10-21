@@ -25,7 +25,7 @@ Status BTIndexPage::insertKey (const void *key,
   dataType->pageNo = pageNo;
 
   //Create the <key, pageNo> pair using make_entry function.
-  make_entry(target, key_type, key, INDEX, *dataType, &recLen)
+  make_entry(target, key_type, key, INDEX, *dataType, &recLen);
 
   //Use insertRecord of sorted_page class to insert the data stored in target region.
 
@@ -50,6 +50,7 @@ Status BTIndexPage::get_page_no(const void *key,
                                 PageId & pageNo)
 {
 
+  Status stat;
   RID rid;
   PageId firstPage;
   Keytype firstKey;
@@ -69,10 +70,10 @@ Status BTIndexPage::get_page_no(const void *key,
 
   // Get the first record in this index page.
 
-  if (OK != (stat = get_first(RID &rid, &firstKey, firstPage)))
+  if (OK != (stat = get_first(rid, &firstKey, firstPage)))
     return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_FIRST_FAILED);
 
-  if (keyCompare(key, firstKey, key_type) < 0)
+  if (keyCompare(key, &firstKey, key_type) < 0)
   {
     // Given key is less than the first key stored in this page. Hence pageNo is nothing but the left pointer. 
     pageNo = getLeftLink();
@@ -85,12 +86,12 @@ Status BTIndexPage::get_page_no(const void *key,
     // Well given key is greater than or equal to firstKey. So time to check where given key fits the bill. 
     numRec = numberOfRecords();
 
-    while(i < numberOfRecords - 1)
+    while(i < (numRec - 1))
     {
       if (OK != (stat = get_next(rid, &targetKey, targetPage)))
         break;
 
-      if ((keyCompare(key, curKey, key_type) >= 0) && (keyCompare(key, targetKey, key_type) < 0)) 
+      if ((keyCompare(key, &curKey, key_type) >= 0) && (keyCompare(key, &targetKey, key_type) < 0)) 
       {
         pageNo = curPage;
         return OK;
@@ -157,7 +158,7 @@ Status BTIndexPage::get_next(RID& rid, void *key, PageId & pageNo)
   }
 
   if (OK != (stat = returnRecord(curRid, target, recLen)))
-    return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_NEXT_FAILED;
+    return MINIBASE_FIRST_ERROR(BTINDEXPAGE, GET_NEXT_FAILED);
 
   keyData = (KeyDataEntry *)target;
   get_key_data(key, dataType, keyData, recLen, INDEX);

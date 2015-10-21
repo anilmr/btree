@@ -43,20 +43,19 @@ Status BTLeafPage::get_data_rid(void *key,
   
   RID rid;
   Keytype curKey;
-  RID dataRid;
   Status stat;
 
   if (OK != (stat = get_first(rid, &curKey, dataRid)))
       return MINIBASE_FIRST_ERROR(BTLEAFPAGE, GET_FIRST_FAILED);
 
-  if (keyCompare(curKey, key, key_type) == 0)
+  if (keyCompare(&curKey, key, key_type) == 0)
       return OK;
 
   else
   {
     while(OK == (stat = get_next(rid, &curKey, dataRid)))
     {
-      if (keyCompare(curKey, key, key_type) == 0)
+      if (keyCompare(&curKey, key, key_type) == 0)
           return OK;
     }
   }
