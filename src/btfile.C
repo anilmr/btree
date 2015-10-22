@@ -111,31 +111,153 @@ Status BTreeFile::insert(const void *key, const RID rid) {
 
 
 
-Status BTreeFile::ifLeafPage(PageId pageNo, 
+Status BTreeFile::ifLeafPage( PageId pageNo, 
                               const void *key, 
                               const RID rid, 
                               void *splitKey, 
                               PageId& splitPage)
 
 {
-  Status 
+  Status stat;
+  RID curRid;
+  PageId splitPageNo;
+  int pivot;
+  int numRec;
+  int count = 1;
+
+  if (OK != (stat = MINIBASE_BM->pinPage(pageNo, (Page *&)page)))
+      return MINIBASE_CHAIN_ERROR(BUFMGR, stat);
+  
+  BTLeafPage *leafPage = (BTLeafPage *)page;
+  
+  if (OK == (stat = leafPage->insertRec(key, btpage->key_type, rid, curRid)))
+  {
+    *splitKey = NULL;
+    splitPage = INVALID_PAGE;
+    return OK;
+  }
+  else
+  {
+    // There is no space left to insert record in this leaf page.
+    // Need to split leaf page and insert.
+    // 1. Create a new LEAF page.
+    // 2. Find d = numberOfrecords()/2, round it off to even. 
+    // 3. Copy d+1 to n records to newLeafPage.
+    // 4. Delete d+1 entries from currentLeafPage.
+    // 5. Insert current key to respective LEAF page.
+    // 6. Take the first key of new LEAF page as splitkey and newleaf pageid as split page.
+    //
+    
+
+    if (OK != (stat = MINIBASE_BM->newPage(splitPageNo, (Page *&)page)))
+        return MINIBASE_CHAIN_ERROR(BUFMGR, stat);
+    
+    BTLeafPage *splitLeafPage = (BTLeafPage *)page;
+    splitLeafPage->init(splitPageNo);
+  
+    numRec = leafPage->numberOfRecords();
+    pivot = numRec/2;
+    
+    RID entryRid;
+    RID tmpRid;
+    RID dataRid;
+    RID splitRid;
+    void *entryKey;
+
+    if (OK != (stat = leafPage->get_first(entryRid, entryKey, dataRid)))
+        return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, GET_FIRST_FAILED);
+
+    while (count <= pivot)
+    {
+      if (OK != (stat = leafPage->get_next(entryRid, entryKey, dataRid)))
+        if (stat != DONE)
+          return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, GET_NEXT_FAILED);
+
+      ++count;
+    }
+    
+    int start=0;
+    while(count < numRec)
+    {
+      if (start == 0)
+      {
+        if (OK != (stat = leafPage->get_next(entryRid, entryKey, dataRid)))
+          if (stat != DONE)
+            return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, GET_NEXT_FAILED);
+      }
+      
+      ++count;
+      // start inserting records to splitLeafPage.
+      if (OK != (stat = splitLeafPage->insertRec(entryKey, btpage->key_type, dataRid, tmpRid)))
+          return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, INSERT_REC_FAILED);
+      RID copyRid;
+      copyRid = entryRid;
+      if (OK != (stat = leafPage->get_next(entryRid, entryKey, dataRid)))
+          if (stat != DONE)
+              return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, GET_NEXT_FAILED);
+      
+      if (OK != (stat = leafPage->deleteKey(copyRid)))
+          return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, DELETE_REC_FAILED);
+      // entryRid = copyRid;
+      start = 1;
+      
+    }
+
+    // Now compare the key with first record of newLeafPage.
+
+    if (OK != (stat = splitLeafPage->get_first(splitRid, entryKey, entryRid)))
+        return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, GET_FIRST_FAILED);
+
+    if (keyCompare(key, entryKey, btpage->key_type) < 0) 
+    {
+      // Insert in leafPage.
+      if (OK != (stat = leafPage->insertRec(key, btpage->key_type,rid, tmpRid)))
+          MINIBASE_CHAIN_ERROR(BTLEAFPAGE, INSERT_REC_ERROR);
+    } 
+    else 
+    {
+      if (OK != (stat = splitLeafPage->insertRec(key, btpage->key_type,rid, tmpRid)))
+          MINIBASE_CHAIN_ERROR(BTLEAFPAGE, INSERT_REC_ERROR);
+    }
+
+    splitLeafPage->setPrevPage(pageNo);
+    splitLeafPage->setNextPage(leafPage->getNextPage());
+    leafPage->setNextPage(splitPageNo);
+    
+    // Get first record of splitLeafPage.
+
+    if (OK != (stat = splitLeafPage->get_first(splitRid, entryKey, entryRid)))
+      return MINIBASE_CHAIN_ERROR(BTLEAFPAGE, GET_FIRST_FAILED);
+
+    *splitKey = entryKey;
+    splitPage = splitPageNo;
+    
+    // Unpin LeafPage and SplitLeafPage 
+    
+    if (OK != (stat = MINIBASE_BM->unpinPage(pageNo, TRUE)))
+        return MINIBASE_CHAIN_ERROR(BUFMGR, stat);
+
+    if (OK != (stat = MINIBASE_BM->unpinPage(splitPageNo, TRUE)))
+        return MINIBASE_CHAIN_ERROR(BUFMGR, stat);
+    
+    return OK;
+  }
 
 }
+
 
 Status BTreeFile::ifIndexPage(PageId pageNo, 
                               const void *key, 
                               const RID rid, 
                               void *splitKey, 
                               PageId& splitPage)
+
 {
-  
+    
   
 }
     
     
-
-
-
 Status BTreeFile::insertElement(PageId pageNo, const void *key, const RID rid) {
   
     Status stat;
