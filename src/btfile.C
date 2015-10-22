@@ -71,11 +71,95 @@ BTreeFile::~BTreeFile ()
 Status BTreeFile::destroyFile ()
 {
   return OK;
+
 }
 
 Status BTreeFile::insert(const void *key, const RID rid) {
-  // put your code here
+  
+  Status stat;
+  PageId rootPage;
+  PageId insertPage;
+  // check if key is null, if so return an error.
+  if (key == NULL) {
+    return MINIBASE_FIRST_ERROR(BTREEFILE, KEY_ERROR);
+  }
+
+  // Check if the btpage->root is an INVALID_PAGE, if so then need to create a new LEAF page.
+  
+  if(btpage->root == INVALID_PAGE)
+  {
+    if (OK != (stat = MINIBASE_BM->newPage(rootPage, (page *&)page)))
+        return MINIBASE_CHAIN_ERROR(BUFMGR, stat);
+    
+    ((SortedPage *)page)->init(rootPage);
+    ((SortedPage *)page)->set_type(LEAF);
+    btpage->root = rootPage;
+    
+    if (OK != (stat = MINIBASE_BM->unpinPage(rootPage, TRUE)))
+        return MINIBASE_CHAIN_ERROR(BUFMGR, stat);
+  }
+  
+  insertPage = rootPage;
+
+  if (OK != (stat = insertElement(insertPage, key, rid)))
+    return MINIBASE_FIRST_ERROR(BTREEFILE, INSERT_ERROR);
+
+  
+  // Insert into this leaf page, if the space runs out, we have to split the page and add index page.
   return OK;
+}
+
+
+
+Status BTreeFile::ifLeafPage(PageId pageNo, 
+                              const void *key, 
+                              const RID rid, 
+                              void *splitKey, 
+                              PageId& splitPage)
+
+{
+  Status 
+
+}
+
+Status BTreeFile::ifIndexPage(PageId pageNo, 
+                              const void *key, 
+                              const RID rid, 
+                              void *splitKey, 
+                              PageId& splitPage)
+{
+  
+  
+}
+    
+    
+
+
+
+Status BTreeFile::insertElement(PageId pageNo, const void *key, const RID rid) {
+  
+    Status stat;
+    PageId pageNum;
+    RID curRid;
+
+    // Pin the page with page number pageNo.
+
+    if(OK != (stat = MINIBASE_BM->pinPage(pageNo, (Page *&)page)))
+        return MINIBASE_CHAIN_ERROR(BUFMGR, stat);
+    
+    SortedPage *curPage = (SortedPage *)page;
+    
+    if (curPage->get_type() == INDEX) 
+    {
+      // Given current page is INDEX, so we need to find LEAF page number to insert record.
+      BTIndexPage *pageIndex = (BTIndexPage *)curPage;
+      PageId targetPage;
+
+      if (OK != (stat = pageIndex->get_page_no(key, btpage->key_type, targetPage)))
+          MINIBASE_CHAIN_ERROR(BTINDEXPAGE, GET_PAGE_NO_FAILED);
+      
+      // Call insertElement again to Insert this key, record in specified 
+    }
 }
 
 Status BTreeFile::Delete(const void *key, const RID rid) {
