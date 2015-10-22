@@ -18,24 +18,58 @@ static error_string_table btree_table( BTREE, BtreeErrorMsgs);
 
 BTreeFile::BTreeFile (Status& returnStatus, const char *filename)
 {
-  // put your code here
+  PageId startPage;
+  
+  // Use MINIBASE_DB->get_file_entry method to open given file.
+  returnStatus = MINIBASE_DB->get_file_entry(filename, startPage);
+
+  // Use MINIBASE_BM->pinPage method to pin the startPage 
+  returnStatus = MINIBASE_BM->pinPage(startPage, (Page* &)btpage);
+
 }
 
 BTreeFile::BTreeFile (Status& returnStatus, const char *filename, 
                       const AttrType keytype,
                       const int keysize)
 {
-  // put your code here
+  
+  PageId startPage;
+  
+  if ( OK != (returnStatus = MINIBASE_DB->get_file_entry(filename, startPage)))
+  {
+    returnStatus = MINIBASE_BM->newPage(startPage, (Page* &)btpage);
+    returnStatus = MINIBASE_DB->add_file_entry(filename, startPage);
+    returnStatus = MINIBASE_BM->pinPage(startPage, (Page* &)btpage);
+  }
+  
+  // typecast the btpage allocated to sortedPage. 
+  // Initialize the sortedPage class and set it's type to LEAF.
+  // As initially its a b-tree with only one LEAF.
+
+  ((SortedPage *)btpage)->init(startPage);
+  ((SortedPage *)btpage)->set_type(LEAF);
+  
+  btpage->key_type = keytype;
+  btpage->keysize = keysize;
+  btpage->root = INVALID_PAGE;
+  file = filename;
+
 }
 
 BTreeFile::~BTreeFile ()
 {
-  // put your code here
+  
+  // Just unpin header index page. 
+  // Don't delete the file entry as the same index can be made use to create another index.
+
+  PageId startPage;
+  Status stat;
+  stat = MINIBASE_DB->get_file_entry(file, startPage);
+  stat = MINIBASE_BM->unpinPage(startPage, TRUE);
 }
 
 Status BTreeFile::destroyFile ()
 {
-  // put your code here
   return OK;
 }
 

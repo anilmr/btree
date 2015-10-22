@@ -59,7 +59,14 @@ class BTreeFile: public IndexFile
     int keysize();
     
   private:
+    const char *file;
+    struct BTreeHeaderPage { 
+        PageId root;
+        AttrType key_type;
+        int keysize;
+    };
 
+    struct BTreeHeaderPage *btpage;
 };
 
 #endif
