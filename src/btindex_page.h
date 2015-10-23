@@ -47,7 +47,7 @@ class BTIndexPage : public SortedPage {
 // described in the textbook, and returns the page_no of the
 // child to be searched next.
 
-   Status get_page_no(const void *key, AttrType key_type, PageId & pageNo);
+   Status get_page_no(const void *key, AttrType key_type, PageId& pageNo);
 
     
 // ------------------- Iterators ------------------------
@@ -60,8 +60,8 @@ class BTIndexPage : public SortedPage {
 // two components: namely, the key and pageNo.
 // Should return NOMORERECS when there are no more pairs.
 
-   Status get_first(RID& rid, void *key, PageId & pageNo);
-   Status get_next (RID& rid, void *key, PageId & pageNo);
+   Status get_first(RID& rid, void *key, PageId& pageNo);
+   Status get_next (RID& rid, void *key, PageId& pageNo);
 
 // ------------------- Left Link ------------------------
 // You will recall that index pages have a left-most

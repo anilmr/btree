@@ -15,7 +15,7 @@
 #include "bt.h"
 
 // Define your error code for B+ tree here
-// enum btErrCodes  {...}
+enum btErrCodes  {INSERT_ELEMENT_ERROR, KEY_ERROR, INSERT_ERROR, IFLEAF_ERROR};
 
 class BTreeFile: public IndexFile
 {
@@ -67,6 +67,9 @@ class BTreeFile: public IndexFile
     };
 
     struct BTreeHeaderPage *btpage;
+
+    Status insertElement(PageId pageNo,const void *key, const RID rid, void **splitKey, PageId& splitPage);
+    Status ifLeafPage(PageId pageNo, const void *key, const RID rid, void **splitKey, PageId& splitPage);
 };
 
 #endif

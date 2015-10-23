@@ -26,7 +26,7 @@ Status BTLeafPage::insertRec(const void *key,
   dataType->rid = dataRid;
   
   make_entry(target, key_type, key, LEAF, *dataType, &recLen);
-
+  cout << "Inserting key " << *(int *)key << endl;
   if (OK != (stat = insertRecord(key_type, (char *)target, recLen, rid)))
     return MINIBASE_FIRST_ERROR(BTLEAFPAGE, INSERT_REC_FAILED);
 
@@ -101,14 +101,24 @@ Status BTLeafPage::get_next (RID& rid,
   Datatype *dataType = new Datatype;
 
   if (OK != (stat = nextRecord(rid, curRid)))
-    return MINIBASE_FIRST_ERROR(BTLEAFPAGE, GET_NEXT_FAILED);
+    return DONE;
 
-  if (OK != (stat = returnRecord(rid, target, recLen)))
+  if (OK != (stat = returnRecord(curRid, target, recLen)))
       return MINIBASE_FIRST_ERROR(BTLEAFPAGE, GET_RECORD_FAILED);
 
   keyData = (KeyDataEntry *)target;
   get_key_data(key, dataType, keyData, recLen, LEAF);
   rid = curRid;
   dataRid = dataType->rid;
+  return OK;
+}
+
+Status BTLeafPage::deleteKey(const RID& rid)
+{
+  Status stat;
+
+  if ( OK != (stat = (((SortedPage *)this)->deleteRecord(rid))) )
+     return MINIBASE_CHAIN_ERROR(SORTEDPAGE, stat);
+ 
   return OK;
 }
